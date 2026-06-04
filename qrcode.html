@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart QR Payment Generator</title>
+    <!-- นำเข้า Google Fonts & FontAwesome สำหรับไอคอน -->
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- นำเข้าคลังสร้าง QR Code ระดับมาตรฐาน -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #0284c7;
+            --accent-hover: #0369a1;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --baac-color: #ba943a; /* สีทอง/เขียว สไตล์ ธกส. เล็กน้อยเพื่อความพรีเมียม */
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 40px 35px;
+            border-radius: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            width: 100%;
+            max-width: 420px;
+            transition: all 0.3s ease;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h2 {
+            font-family: 'Chakra Petch', sans-serif;
+            margin: 0 0 8px 0;
+            color: var(--primary);
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .header p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-main);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 15px;
+            color: var(--text-muted);
+            font-size: 16px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 14px 14px 14px 45px;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            background-color: #f8fafc;
+            color: var(--text-main);
+            font-size: 16px;
+            font-family: 'Sarabun', sans-serif;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            background-color: #fff;
+            box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.15);
+        }
+
+        /* ตกแต่งปุ่มเลือกประเภท */
+        .type-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .type-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            background: #fff;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-muted);
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .type-btn.active {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(2, 132, 199, 0.05);
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+            font-family: 'Sarabun', sans-serif;
+        }
+
+        .btn-submit:hover {
+            background: #1e293b;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* โซนแสดงผล QR Code */
+        .qr-result-box {
+            display: none;
+            margin-top: 30px;
+            padding: 25px;
+            background: #f8fafc;
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .qr-result-box .status-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #bbf7d0;
+            color: #166534;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .qr-display {
+            background: white;
+            padding: 15px;
+            border-radius: 16px;
+            display: inline-block;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            margin-bottom: 15px;
+        }
+
+        .qr-display img {
+            display: block;
+        }
+
+        .qr-info-text {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .btn-download {
+            background: #fff;
+            color: var(--text-main);
+            border: 1px solid #cbd5e1;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-download:hover {
+            background: #f1f5f9;
+            border-color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2>สร้าง QR Code รับเงิน</h2>
+        <p>รองรับทั้งเลขบัญชี และ เบอร์พร้อมเพย์ สแกนได้ทุกธนาคาร</p>
+    </div>
+
+    <!-- ปุ่มเลือกประเภทช่องทางรับเงิน -->
+    <div class="type-selector">
+        <button class="type-btn active" onclick="switchType('promptpay', this)">
+            <i class="fa-solid fa-mobile-screen-button"></i> พร้อมเพย์ / บัตร ปชช.
+        </button>
+        <button class="type-btn" onclick="switchType('bank', this)">
+            <i class="fa-solid fa-building-columns"></i> บัญชีธนาคารตรงๆ
+        </button>
+    </div>
+
+    <!-- ฟอร์มกรอกข้อมูล -->
+    <div class="form-group" id="bankSelectGroup" style="display: none;">
+        <label for="bankCode">เลือกธนาคารปลายทาง</label>
+        <div class="input-wrapper">
+            <i class="fa-solid fa-landmark"></i>
+            <select id="bankCode" style="padding-left: 45px;">
+                <option value="034">ธกส. (ธนาคารเพื่อการเกษตรและสหกรณ์ฯ)</option>
+                <option value="004">กสิกรไทย (KBank)</option>
+                <option value="014">ไทยพาณิชย์ (SCB)</option>
+                <option value="002">กรุงเทพ (BBL)</option>
+                <option value="006">กรุงไทย (KTB)</option>
+                <option value="025">กรุงศรี (BAY)</option>
+                <option value="011">ทหารไทยธนชาต (ttb)</option>
+                <option value="030">ออมสิน (GSB)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label id="inputLabel" for="targetId">เบอร์พร้อมเพย์ หรือ เลขบัตรประชาชน</label>
+        <div class="input-wrapper">
+            <i class="fa-solid fa-address-card" id="inputIcon"></i>
+            <input type="text" id="targetId" placeholder="เช่น 0812345678 หรือ เลขบัตรประชาชน">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="amount">จำนวนเงินที่ต้องการระบุ (บาท)</label>
+        <div class="input-wrapper">
+            <i class="fa-solid fa-baht-sign"></i>
+            <input type="number" id="amount" step="0.01" placeholder="ระบุจำนวนเงิน หรือปล่อยว่างไว้ก็ได้">
+        </div>
+    </div>
+
+    <button class="btn-submit" onclick="generatePremiumQR()">
+        <i class="fa-solid fa-qrcode"></i> สร้าง QR Code พรีเมียม
+    </button>
+
+    <!-- พื้นที่แสดงผลลัพธ์ -->
+    <div class="qr-result-box" id="qrResultBox">
+        <div class="status-tag">
+            <i class="fa-solid fa-circle-check"></i> ออกแบบสำเร็จ
+        </div>
+        <div class="qr-display" id="qrcode"></div>
+        <div class="qr-info-text">
+            <strong>สแกนจ่ายได้ทุกแอปพลิเคชันธนาคาร</strong><br>
+            ระบบสร้างตามมาตรฐานสากล EMVCo ข้ามธนาคารโดยสมบูรณ์
+        </div>
+        <button class="btn-download" onclick="downloadQR()">
+            <i class="fa-solid fa-download"></i> ดาวน์โหลดรูปภาพ
+        </button>
+    </div>
+</div>
+
+<script>
+    let currentType = 'promptpay';
+
+    // สลับโหมดการทำงานระหว่าง พร้อมเพย์ กับ เลขบัญชีธนาคาร
+    function switchType(type, element) {
+        currentType = type;
+        
+        // สลับสถานะปุ่มดีไซน์ active
+        document.querySelectorAll('.type-btn').forEach(btn => btn.classList.remove('active'));
+        element.classList.add('active');
+
+        const bankGroup = document.getElementById('bankSelectGroup');
+        const inputLabel = document.getElementById('inputLabel');
+        const inputIcon = document.getElementById('inputIcon');
+        const targetInput = document.getElementById('targetId');
+
+        if (type === 'bank') {
+            bankGroup.style.display = 'block';
+            inputLabel.innerText = "เลขที่บัญชีธนาคาร";
+            inputIcon.className = "fa-solid fa-wallet";
+            targetInput.placeholder = "กรอกเลขบัญชี เช่น 020145055801";
+        } else {
+            bankGroup.style.display = 'none';
+            inputLabel.innerText = "เบอร์พร้อมเพย์ หรือ เลขบัตรประชาชน";
+            inputIcon.className = "fa-solid fa-address-card";
+            targetInput.placeholder = "เช่น 0812345678 หรือ เลขบัตรประชาชน";
+        }
+    }
+
+    // ตัวคำนวณรหัส CRC16 สำหรับแปลงร่างเป็นมาตรฐานธนาคาร (EMVCo)
+    function crc16(str) {
+        let crc = 0xFFFF;
+        for (let c = 0; c < str.length; c++) {
+            let cls = str.charCodeAt(c);
+            crc ^= (cls << 8);
+            for (let i = 0; i < 8; i++) {
+                if (crc & 0x8000) {
+                    crc = (crc << 1) ^ 0x1021;
+                } else {
+                    crc = (crc << 1);
+                }
+            }
+        }
+        crc &= 0xFFFF;
+        return ("0000" + crc.toString(16).toUpperCase()).slice(-4);
+    }
+
+    // ฟังก์ชันจัดฟอร์แมตข้อมูลตามสเปกพร้อมเพย์และธนาคารแห่งประเทศไทย
+    function formatParam(id, value) {
+        return id + ("00" + value.length).slice(-2) + value;
+    }
+
+    // ฟังก์ชันหลักในการสร้าง QR Code
+    function generatePremiumQR() {
+        let rawTarget = document.getElementById('targetId').value.trim().replace(/-/g, '');
+        const amount = document.getElementById('amount').value.trim();
+        const qrContainer = document.getElementById('qrcode');
+        
+        if (!rawTarget) {
+            alert('กรุณากรอกข้อมูลผู้รับเงินด้วยครับ');
+            return;
+        }
+
+        // ประกอบร่างข้อมูลพื้นฐาน (EMVCo)
+        let qrData = "000201010211"; 
+
+        if (currentType === 'promptpay') {
+            // โหมดพร้อมเพย์ (เบอร์ หรือ บัตรประชาชน)
+            let targetType = rawTarget.length >= 13 ? "02" : "01";
+            if (targetType === "01") {
+                rawTarget = "0066" + rawTarget.substring(1); // จัดรูปแบบเบอร์โทรศัพท์ประเทศไทยสากล
+            }
+            let merchantInfo = formatParam("00", "A000000677010111") + formatParam(targetType, rawTarget);
+            qrData += formatParam("29", merchantInfo);
+        } else {
+            // โหมดเลขบัญชีธนาคารตรงๆ (Cross-bank Bill Payment มาตรฐานแห่งประเทศไทย)
+            const bankCode = document.getElementById('bankCode').value;
+            // สเปกสำหรับจ่ายเงินเข้าบัญชีด้วย Code ธนาคาร (A000000677010112)
+            let merchantInfo = formatParam("00", "A000000677010112") + formatParam("01", "0" + bankCode + rawTarget);
+            qrData += formatParam("30", merchantInfo);
+        }
+
+        // สกุลเงิน THB (764) และประเทศ TH (TH)
+        qrData += "53037645802TH";
+
+        // ตรวจสอบเรื่องยอดเงินโอน
+        if (amount && parseFloat(amount) > 0) {
+            let formattedAmount = parseFloat(amount).toFixed(2);
+            qrData += formatParam("54", formattedAmount);
+        }
+
+        // ใส่รหัสตรวจสอบส่วนท้าย (Checksum) ปิดท้ายสเปกข้อมูล
+        qrData += "6304";
+        qrData += crc16(qrData);
+
+        // ล้างกล่องรูปเก่าออกก่อน
+        qrContainer.innerHTML = "";
+
+        // วาดรูป QR Code ขึ้นมาใหม่แบบคมชัดสูง (High Correction Level)
+        new QRCode(qrContainer, {
+            text: qrData,
+            width: 200,
+            height: 200,
+            colorDark: "#0f172a",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+
+        // เปิดแสดงหน้าต่างผลลัพธ์
+        document.getElementById('qrResultBox').style.display = 'block';
+    }
+
+    // ฟังก์ชันเสริมสำหรับกดบันทึกรูปภาพลงเครื่องคอมพิวเตอร์หรือมือถือทันที
+    function downloadQR() {
+        const qrImage = document.querySelector('#qrcode img');
+        if (qrImage) {
+            const link = document.createElement('a');
+            link.href = qrImage.src;
+            link.download = 'payment-qrcode.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            alert('ไม่พบรูปภาพ QR Code กรุณากดสร้างก่อนครับ');
+        }
+    }
+</script>
+
+</body>
+</html>
